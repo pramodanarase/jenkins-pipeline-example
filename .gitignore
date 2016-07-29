@@ -1,0 +1,52 @@
+.gradle
+build/
+out/
+*.iml
+.idea
+.DS_Store
+.vagrant
+###
+### https://portal.tpt.com/stash/projects/DO/repos/dev-templates/browse/gitignore-TEMPLATE
+### - name this file '.gitignore' and
+### - add it into root of your project
+###
+
+### Maven template
+target/
+work/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+overlays
+
+### Eclipse template
+.classpath
+.project
+.settings/
+
+### IDEA template
+.idea/
+*.iml
+*.ipr
+*.iws
+atlassian-ide-plugin.xml
+
+### NetBeans template
+nbactions.xml
+/nb-configuration.xml
+
+### editors template
+*~
+*#
+*.log
+
+### OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

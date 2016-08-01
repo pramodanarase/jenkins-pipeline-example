@@ -24,7 +24,7 @@ pipelineJob("8.4_plus_cxl_deploy_pipeline"){
 
     definition {
         cps {
-            script(readFileFromWorkspace("${root_dir}/jobs/8_4_plus/8_4_plus_pipeline.groovy"))
+            script(readFileFromWorkspace("${ROOT_DIR}/jobs/8_4_plus/8_4_plus_pipeline.groovy"))
             sandbox()
         }
     }

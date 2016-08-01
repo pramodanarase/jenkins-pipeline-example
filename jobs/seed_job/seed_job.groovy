@@ -35,7 +35,6 @@ def job=job("ts-automation-seed-job") {
             goals("clean package -DskipTests")
         }
         dsl {
-            external("jobs/seed_job/delete_all_jobs.groovy")
             external("jobs/8_4_plus/*.groovy")
             removeAction("DELETE")
             removeViewAction("DELETE")

@@ -1,0 +1,220 @@
+<project name="start-cxl-server" default="start-cxl-server">
+	<property environment="env" />
+    <echo message="Healthy Workflow Deployment ${workspace}/antlib/ant-contrib.jar" />
+	<!-- Task definitions -->
+	<taskdef resource="net/sf/antcontrib/antlib.xml">
+		<classpath>
+			<pathelement location="${workspace}/antlib/ant-contrib-1.0b3.jar" />
+		</classpath>
+	</taskdef>
+
+	<!-- variable declaration -->
+	<var name="SCENARIO_PATH" value="${workspace}/conf/${BRANCH}/scenario"/>
+	<var name="HOST_CONF_PATH" value="${workspace}/conf/${BRANCH}/hostConf"/>
+	<var name="SCRIPT_DIR" value="${workspace}/scripts"/>
+	
+	
+
+	<target name="start-cxl-server" >
+		<!-- load properties to inject --> 	
+		<loadproperties srcFile="${SCENARIO_PATH}/${SCENARIO_NAME}/cxl/${HOST_NAME}/${DEPLOY_INSTALL_FOLDER}/cxl.properties"/>
+		<loadproperties srcFile="${HOST_CONF_PATH}/${HOST_NAME}/set_env.properties"/>
+		<var name="SOURCE_DIR" value="${SOURCE_DIR}"/>
+		<var name="INSTALL_DIR" value="${INSTALL_DIR}"/>
+		<echo message="Healthy Workflow Deployment for ${HOST_NAME}, ${DEPLOY_SERVER_NAME}" />
+		<if>
+			<isset property="HOST_NAME" />
+			<then>	
+				<antcall target="start_cxl_deploy"/>		
+			</then>
+			<else>
+				<echo message="Property HOST_NAME not set in set_job_env.cmd file! Hence skipping  deployment." />
+			</else>
+		</if>
+
+	</target>
+
+	<target name="start_cxl_deploy">
+		<echo message="=============================================================================================" />
+		<echo message="Deploy in progress for host - ${HOST_NAME}" />
+		<antcall target="shutdown_server_and_client"/>
+		<!-- Unzip and inject config -->
+		<antcall target="unzip_artifact"/>
+		<antcall target="copy_env_files"/>
+		<antcall target="update_properties_master"/>
+		<echo>====================Run CXL====================</echo>
+		<antcall target="start_server" />
+		<echo message="All steps completed successfully.." />
+		<echo message="=============================================================================================" />
+	</target>
+
+	<!-- Step 1: SHUTDOWN SERVER & CLIENT (IF RUNNING) -->
+	<target name="shutdown_server_and_client">
+		<var name="RUN_DIR" value="${INSTALL_DIR}\${DEPLOY_SERVER_NAME}\CXLServer\bin"/>
+		<!-- Shutdown Server -->
+		<if>
+			<available file="${RUN_DIR}" type="dir" />
+			<then>
+				<!-- Initialize the shutdown script name for 32-bit process servers. -->
+				<property name="shutdownCmdFile32" value="shutdown-servers-32.cmd" />
+				<echo message="Shutting down the 32-bit process servers first...."/>
+				<exec dir="${RUN_DIR}" executable="cmd" failonerror="false">
+					<arg value="/c"/>
+					<arg value="${shutdownCmdFile32}"/>
+				</exec>
+
+				<!-- Initialize the shutdown script name for 64-bit process servers. -->
+				<property name="shutdownCmdFile64" value="shutdown-servers.cmd" />
+				<echo message="Shutting down the 64-bit process servers second...."/>
+				<exec dir="${RUN_DIR}" executable="cmd" failonerror="false">
+					<arg value="/c"/>
+					<arg value="${shutdownCmdFile64}"/>
+				</exec>
+				<echo message="Hopefully all servers have shutdown by now.." />
+			</then>
+			<else>
+				<echo message="Skipping shutdown as folder ${RUN_DIR} doesn't exist!" />
+			</else>
+		</if>
+	</target>
+
+	<!-- Step 4: UNZIP ARTIFACT -->
+	<target name="unzip_artifact" depends="rename_artifact">
+		<!-- Deleting the Install directory -->
+		<delete quiet="true" dir="${INSTALL_DIR}\${DEPLOY_SERVER_NAME}\CXLServer"/>
+		<!--/copy-->
+		<unzip src="${workspace}\XLInstall.zip" dest="${INSTALL_DIR}\${DEPLOY_SERVER_NAME}\CXLServer">
+		</unzip>
+	</target>
+
+	<!-- Step 5: COPY ENV FILES -->
+	<target name="copy_env_files">
+		<copy overwrite="true" todir="${INSTALL_DIR}\${DEPLOY_SERVER_NAME}\CXLServer\include\custom">
+			<fileset dir="${SCENARIO_PATH}/${SCENARIO_NAME}/cxl/${HOST_NAME}/${DEPLOY_INSTALL_FOLDER}"  includes="customparams.cfg"/>
+		</copy>
+		<copy overwrite="true" todir="${INSTALL_DIR}\${DEPLOY_SERVER_NAME}\CXLServer\include\license">
+			<fileset dir="${SCENARIO_PATH}/${SCENARIO_NAME}/cxl/${HOST_NAME}/License"  includes="*.lic"/>
+		</copy>
+	</target>
+
+	<!-- Step 6: UPDATE CONFIGURATION -->
+	<target name="update_properties_master" depends="concat_configuration_file">
+		<ant dir="${SCRIPT_DIR}\" antfile="cxl/cxl_update_properties.xml" target="update_properties">
+			<property name="inputFile" value="${workspace}\set_all_env.properties"/>
+		</ant>
+	</target>
+
+	<!-- Step 6: RUN SERVER-->
+	<target name="start_server">
+		<echo message="Determining if Sun GlassFish(tm) Message Queue 4.4 is to be launched."/>
+		<echo message="IS_JB_WITH_VCP = ${IS_JB_WITH_VCP}"/>
+		<if>
+			<istrue value="${IS_JB_WITH_VCP}"/>
+			<then>
+				<echo message="Launching Sun GlassFish(tm) Message Queue 4.4." />
+				<exec dir="${IMQBROKER_DIR}" executable="cmd" spawn="true">
+					<arg value="/c"/>
+					<arg value="start imqbrokerd.exe"/>
+				</exec>
+			</then>
+			<else>
+				<echo message="No need to launching Sun GlassFish(tm) Message Queue 4.4." />
+			</else>
+		</if>
+
+
+		<echo message="Launching the 64-bit process servers first...."/>
+		<exec dir="${INSTALL_DIR}\${DEPLOY_SERVER_NAME}\CXLServer\bin" executable="cmd" spawn="true">
+		    <env key="BUILD_ID" value="dontKillMe"/>
+			<arg value="/c"/>
+			<arg value="start run-servers.cmd"/>
+		</exec>
+
+		<echo message="Launching the 32-bit process servers second...."/>
+		<exec dir="${INSTALL_DIR}\${DEPLOY_SERVER_NAME}\CXLServer\bin" executable="cmd" spawn="true">
+			<env key="BUILD_ID" value="dontKillMe"/>
+			<arg value="/c"/>
+			<arg value="start run-servers-32.cmd"/>
+		</exec>
+		<echo message="The Server Launch Asynchronously......" />
+	</target>
+
+	<target name="concat_configuration_file">
+	    <delete quiet="true" file="${workspace}/set_all_env.properties"/>
+		<!-- add weblogi or jboss to XL_APPLICATION_SERVER= weblogic -->
+		<if>
+			<and>
+				<equals arg1="${BRANCH}" arg2="master" />
+				<equals arg1="${DEPLOY_INSTALL_FOLDER}" arg2="XLInstall_WL12c" />			
+			</and>			
+			<then>
+				<echo message="XL_APPLICATION_SERVER=weblogic${line.separator}" file="${workspace}/set_all_env.properties" />
+			</then>
+			<elseif>
+				<and>
+					<equals arg1="${BRANCH}" arg2="master" />
+					<equals arg1="${DEPLOY_INSTALL_FOLDER}" arg2="XLInstall_JBoss7.1.1" />			
+				</and>			
+				<then>
+				<echo message="XL_APPLICATION_SERVER=jboss${line.separator}" file="${workspace}/set_all_env.properties" />
+				</then>
+			</elseif>
+		</if>	
+		<!-- merge and copy set_env.properties and set_all_env.properties -->
+		<concat destfile="${workspace}/set_all_env.properties" append="true" fixlastline="yes">
+			<filelist dir="${HOST_CONF_PATH}/${HOST_NAME}"  files="set_env.properties"/>
+			<filelist dir="${SCENARIO_PATH}/${SCENARIO_NAME}/cxl/${HOST_NAME}/${DEPLOY_INSTALL_FOLDER}" files="cxl.properties"/>
+		</concat>
+	</target>
+
+	<target name="rename_artifact">
+		<echo message="Renaming artifact :${DEPLOY_INSTALL_FOLDER}" />
+		<if>
+		 <equals arg1="${BRANCH}" arg2="master" />
+			<then>
+				<echo message="Rename XL*.zip" />
+				<move todir="${workspace}" overwrite="true">
+					<fileset dir="${workspace}" includes="**/**/XL-*.zip"/>
+					<mapper type="regexp" from="(XL)*(.zip)" to="XLInstall.zip"/>
+				</move>
+			</then>
+			
+			<elseif>
+				<equals arg1="${DEPLOY_INSTALL_FOLDER}" arg2="XLInstall_WL12c" />
+			    <then>
+					<echo message="rename XL-WL*.zip" />
+					<move todir="${workspace}" overwrite="true">
+						<fileset dir="${workspace}" includes="**/**/XL_WL-*.zip"/>
+						<mapper type="regexp" from="(XL-WL)*(.zip)" to="XLInstall.zip"/>
+					</move>
+				</then>
+			</elseif>
+
+			<elseif>
+				<equals arg1="${DEPLOY_INSTALL_FOLDER}" arg2="XLInstall_JBoss7.1.1" />
+				<then>
+					<echo message="Rename XLInstall_JB*.zip" />
+					<move todir="${workspace}" overwrite="true">
+						<fileset dir="${workspace}" includes="**/**/XL_JB-*.zip"/>
+						<mapper type="regexp" from="(XL-JB)*(.zip)" to="XLInstall.zip"/>
+					</move>
+				</then>
+			</elseif>
+			<elseif>
+				<equals arg1="${DEPLOY_INSTALL_FOLDER}" arg2="jetty" />
+				<then>
+					<echo message="Rename XL_JT*.zip" />
+					<move todir="${workspace}" overwrite="true">
+						<fileset dir="${workspace}" includes="**/**/XL_JT-*.zip"/>
+						<mapper type="regexp" from="(XL_JT)*(.zip)" to="XLInstall.zip"/>
+					</move>
+				</then>
+			</elseif>
+			<else>
+				<echo message="The value of property DEPLOY_INSTALL_FOLDER:${DEPLOY_INSTALL_FOLDER} is not valid!!!" />
+			</else>
+		</if>
+
+	</target>
+
+</project>

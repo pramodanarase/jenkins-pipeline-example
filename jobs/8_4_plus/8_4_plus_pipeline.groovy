@@ -20,5 +20,4 @@ node('master') {
     bat "${antHome}/bin/ant -f ${workspace}\\scripts\\cxl\\start-cxl-server.xml -Dworkspace=" + workspace + " -DSCENARIO_NAME=" + SCENARIO_NAME + " -DBRANCH=" + BRANCH + " -DHOST_NAME=" + HOST_NAME + " -DDEPLOY_INSTALL_FOLDER=" + DEPLOY_INSTALL_FOLDER + " -DDEPLOY_SERVER_NAME=" + DEPLOY_SERVER_NAME
     echo 'in deploy server'
 
-
 }

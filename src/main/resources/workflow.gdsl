@@ -1,4 +1,11 @@
 
+
+def ctx1 = context(pathRegexp: /.*\/jobs\/.*groovy/)
+def ctx2 = context(pathRegexp: /.*\/src\/.*groovy/)
+contributor([ctx1,ctx2] ,{
+    delegatesTo(findClass('javaposse.jobdsl.dsl.DslFactory'))
+})
+
 //The global script scope
 def ctx = context(scope: scriptScope())
 contributor(ctx) {

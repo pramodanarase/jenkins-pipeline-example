@@ -9,8 +9,19 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
+        <job-dsl.version>1.48</job-dsl.version>
         <gmaven.version>1.5</gmaven.version>
         <groovy.version>1.8.9</groovy.version>
+        <spock-core.version>0.7-groovy-1.8</spock-core.version>
+        <jenkins-war.version>1.642.4</jenkins-war.version>
+        <!-- Jenkins Unit test -->
+        <jenkins-test-harness.version>2.8</jenkins-test-harness.version>
+        <structs.version>1.1</structs.version>
+        <http-builder.version>0.7.1</http-builder.version>
+        <seed-job-jenkins-url>http://localhost:8888/</seed-job-jenkins-url>
+        <jenkins_username>admin</jenkins_username>
+        <jenkins_password>password</jenkins_password>
+
     </properties>
 
     <dependencies>
@@ -24,6 +35,163 @@
             <artifactId>workflow-cps</artifactId>
             <version>2.9</version>
         </dependency>
+        <!-- DSL plugin -->
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>job-dsl</artifactId>
+            <version>${job-dsl.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>structs</artifactId>
+            <version>${structs.version}</version>
+        </dependency>
+
+        <!-- Jenkins test harness dependencies  -->
+        <dependency>
+            <groupId>org.jenkins-ci.main</groupId>
+            <artifactId>jenkins-test-harness</artifactId>
+            <version>${jenkins-test-harness.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.main</groupId>
+            <artifactId>jenkins-war</artifactId>
+            <version>${jenkins-war.version}</version>
+            <type>war</type>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.main</groupId>
+            <artifactId>jenkins-war</artifactId>
+            <version>${jenkins-war.version}</version>
+            <classifier>war-for-test</classifier>
+        </dependency>
+        <!-- test framework -->
+        <dependency>
+            <groupId>org.spockframework</groupId>
+            <artifactId>spock-core</artifactId>
+            <version>${spock-core.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.codehaus.groovy</groupId>
+                    <artifactId>groovy-all</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- for the RestApiScriptRunner -->
+        <dependency>
+            <groupId>org.codehaus.groovy.modules.http-builder</groupId>
+            <artifactId>http-builder</artifactId>
+            <version>${http-builder.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.codehaus.groovy</groupId>
+                    <artifactId>groovy</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- jenkins pligin-->
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>config-file-provider</artifactId>
+            <version>2.10.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+
+    <build>
+        <sourceDirectory>src/main/groovy</sourceDirectory>
+        <plugins>
+            <plugin>
+                <groupId>org.jenkins-ci.tools</groupId>
+                <artifactId>maven-hpi-plugin</artifactId>
+                <configuration>
+                    <classesDirectory>${project.build.testOutputDirectory}</classesDirectory>
+                    <outputDirectory>${project.build.directory}/jenkins-for-test</outputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>resolve-test-dependency</id>
+                        <goals>
+                            <goal>resolve-test-dependencies</goal>
+                        </goals>
+                        <phase>process-test-classes</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.gmavenplus</groupId>
+                <artifactId>gmavenplus-plugin</artifactId>
+                <configuration>
+                    <sourceEncoding>UTF-8</sourceEncoding>
+                    <debug>true</debug>
+                    <verbose>true</verbose>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>addSources</goal>
+                            <goal>addTestSources</goal>
+                            <goal>generateStubs</goal>
+                            <goal>compile</goal>
+                            <goal>testGenerateStubs</goal>
+                            <goal>testCompile</goal>
+                            <goal>removeStubs</goal>
+                            <goal>removeTestStubs</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>create-seed-job</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <phase>compile</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <mainClass>com.tpt.ci.rest.RestApiScriptRunner</mainClass>
+                            <systemProperties>
+                                <property>
+                                    <key>pattern</key>
+                                    <value>**/**/seed_job.groovy</value>
+                                </property>
+                                <property>
+                                    <key>baseUrl</key>
+                                    <value>${seed-job-jenkins-url}</value>
+                                </property>
+                                <property>
+                                    <key>username</key>
+                                    <value>${jenkins_username}</value>
+                                </property>
+                                <property>
+                                    <key>password</key>
+                                    <value>${jenkins_password}</value>
+                                </property>
+                                <property>
+                                    <key>workspace</key>
+                                    <value>${project.basedir}</value>
+                                </property>
+                            </systemProperties>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+    </profiles>
+
 
 </project>

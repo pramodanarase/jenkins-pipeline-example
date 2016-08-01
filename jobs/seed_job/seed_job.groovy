@@ -9,7 +9,7 @@ def out = getProperty("out")
 
 GlobalVar.init(out)
 
-def job=job("ts-automation-seed-job") {
+def job=job("${SEED_JOB_NAME}") {
     label("master")
     logRotator {
         artifactNumToKeep(2)
@@ -35,6 +35,7 @@ def job=job("ts-automation-seed-job") {
             goals("clean package -DskipTests")
         }
         dsl {
+            external("jobs/init/*.groovy")
             external("jobs/8_4_plus/*dsl.groovy")
             removeAction("DELETE")
             removeViewAction("DELETE")

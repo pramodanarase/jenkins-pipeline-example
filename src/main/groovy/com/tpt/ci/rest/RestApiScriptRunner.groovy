@@ -41,10 +41,10 @@ for(String  fileName : files){
     println "\nprocessing file: $fileName"
     File file = new File(fileName)
     text = file.text
-    /*if(fileName.contains('seed_job') && baseUrl.contains("localhost:")){
+    if(fileName.contains('seed_job') && baseUrl.contains("localhost:")){
        text = Utility.updateSeedJob(file,workspace)
         println "\nremoved scm section from seed job"
-    }*/
+    }
     item =DslScriptLoader.runDslEngine(text, jm)
 
 

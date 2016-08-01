@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="maven-replace-property" default="update_properties">
+	<target name="update_properties">
+		<loadproperties srcFile="${inputFile}"/>
+		<taskdef resource="net/sf/antcontrib/antlib.xml"/>
+
+		<!-- load input property file -->
+		<loadfile property="file.list" srcFile="${inputFile}"/>
+		<!-- iterate over  property file  -->
+		<echo>====================Updating CXL install and deploy properties====================</echo>
+		<for list="${file.list}" param="propertyVar" delimiter="${line.separator}">
+			<sequential>
+				<if>
+					<matches string="@{propertyVar}" pattern="^[^#].*$"/>
+					<!-- check for comment -->
+					<then>
+
+						<var name="propName" unset="true"/>
+						<!-- unset property -->
+						<var name="propVal" unset="true"/>
+						<var name="temp1" unset="true"/>
+
+						<propertyregex property="propName"  input="@{propertyVar}" regexp="(\s*)(.*?)(\s*)=(.*$)"  select="\2"  />
+						<propertyregex property="propVal"  input="@{propertyVar}" regexp="(\s*)\Q${propName}\E(\s*)=(.*$)"  select="\3"  />
+						<echo>Reading ${propName}=${propVal}</echo>
+						<if>
+							<matches string="${propVal}" pattern=".*?\Q\\E.*$" />
+							<then>
+								<antcallback target="handle_backslash" return="propVal"/>
+							</then>
+						</if>
+
+						<if>
+							<isset property="propVal"/>
+							<then>
+								<!-- replace 64 bit property in file -->
+								<replaceregexp byline="true">            
+									<regexp pattern="(\s+|^)\Q${propName}\E(\s*)=(\s*)(.*$)"/>
+									<substitution expression="\1${propName}\2=\3${propVal}"/>
+									<fileset dir="${Root_Path}" includes="${List_of_Files_to_update}"/>				  
+								</replaceregexp>
+
+								<!-- replace 32 bit property in file -->
+								<if>
+									<matches string="${propName}" pattern="^32_.*$"/>
+									<!-- check for 32 bit property -->
+									<then>
+										<propertyregex property="temp1" input="${propName}"  regexp="^32_" replace="" global="true" />
+										<replaceregexp byline="true">            
+											<regexp pattern="(\s+|^)\Q${temp1}\E(\s*)=(\s*)(.*$)"/>
+											<substitution expression="\1${temp1}\2=\3${propVal}"/>
+											<fileset dir="${Root_Path}" includes="${List_of_Files_to_update_32}"/>				  
+										</replaceregexp>
+									</then>
+								</if>
+
+							</then>							
+						</if>
+						<!-- end if propval set -->
+
+					</then>							
+				</if>	
+			</sequential>	
+		</for>
+
+		<var name="propName" unset="true"/>
+		<!-- unset property -->
+		<var name="propVal" unset="true"/>
+		<var name="temp1" unset="true"/>
+		<var name="file.list" unset="true"/>
+
+	</target>
+
+	<target name="handle_backslash">
+		<if>
+			<matches string="${propVal}" pattern=".*\\.*"/>
+			<!-- check for backslash -->
+			<then>
+				<echo> before handle_backslash =${propVal}</echo>
+				<var name="temp_val" value="${propVal}"/>
+				<var name="propVal" unset="true"/>
+				<propertyregex property="propVal" input="${temp_val}"  regexp="\\" replace="\\\\\\\\\\\\\\\\" global="true" />
+				<echo> after handle_backslash =${propVal}</echo>
+				<echo/>
+			</then>
+		</if>
+	</target>
+
+</project>

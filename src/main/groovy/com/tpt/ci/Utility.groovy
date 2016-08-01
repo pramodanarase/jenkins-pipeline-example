@@ -1,5 +1,6 @@
 package com.tpt.ci
 
+import groovy.io.FileType
 import hudson.model.AbstractProject
 import hudson.model.Item
 import jenkins.model.Jenkins
@@ -15,7 +16,6 @@ class Utility {
     static Jenkins jenkins = Jenkins.getInstance()
 
     static def String getWorkspaceDir(String jobName, Object out) {
-
         Item item = jenkins.getItemByFullName(jobName)
         if (item != null) {
             // jenkins.getRawWorkspaceDir()  //${ITEM_ROOTDIR}/workspace
@@ -24,6 +24,7 @@ class Utility {
             out.println("Workspace Dir:" + file.getPath() + "/workspace for job:" + jobName)
             return file.getPath() + "/workspace"
         }
+        out.println("Workspace Dir not found for -" + jobName)
         return ""
     }
 
@@ -107,10 +108,10 @@ class Utility {
 
         if (rootDir != null && rootDir.length() != 0) {
             for (String fileName : fileNames) {
-                inputStream = Utility.class.getClassLoader().getResourceAsStream(srcDir+"/"+fileName)
+                inputStream = Utility.class.getClassLoader().getResourceAsStream(srcDir + "/" + fileName)
                 destFilePath = rootDir + "/" + destDir + "/" + fileName
-                def folder = new File (rootDir + "/" + destDir )
-                if( !folder.exists() ) {
+                def folder = new File(rootDir + "/" + destDir)
+                if (!folder.exists()) {
                     // Create all folders up-to and including
                     folder.mkdirs()
                 }
@@ -125,9 +126,30 @@ class Utility {
         }
     }
 
-    static def String getJenkinsRootDir(){
+    static def String getJenkinsRootDir() {
         File file = jenkins.getRootDir()
         return file.getPath()
+    }
+/**
+ *
+ * @param srcDir
+ * @param targetDir
+ */
+    public static void copyDir(File srcDir, File targetDir) {
+        // creation the target dir
+        if (!targetDir.exists()) {
+            targetDir.mkdir();
+        }
+        // copying the daughter files
+        srcDir.eachFile(FileType.FILES) { File source ->
+            File target = new File(targetDir, source.getName());
+            target.bytes = source.bytes;
+        }
+        // copying the daughter dirs - recursion
+        srcDir.eachFile(FileType.DIRECTORIES) { File source ->
+            File target = new File(targetDir, source.getName());
+            copyDir(source, target)
+        }
     }
 
 /**

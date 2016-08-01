@@ -41,6 +41,18 @@ class GlobalVar {
     def static NODE_LABEL_LINUX_BUILD;
     def static JOB_NAME_PREFIX;
 
+    def static SEED_JOB_NAME;
+
+    //seed job name
+    static getSEED_JOB_NAME() {
+        return SEED_JOB_NAME
+    }
+
+    static void setSEED_JOB_NAME(seedJobName) {
+        SEED_JOB_NAME = seedJobName
+    }
+
+
     static void init(Object out) {
         out.println("inside init")
         try {
@@ -91,6 +103,7 @@ class GlobalVar {
         setNODE_LABEL_WINDOWS_BUILD("windows-build")
         setNODE_LABEL_LINUX_BUILD("linux-build")
         setJOB_NAME_PREFIX(getJobNamePrefix())
+        setSEED_JOB_NAME("ts-automation-seed-job")
     }
 
      static String getJobNamePrefix() {
